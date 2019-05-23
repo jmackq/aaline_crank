@@ -34,7 +34,10 @@ void framebuffer_repr(framebuffer_t* fb) {
 	printf("%dx%d\n", fb->width, fb->height);
 	for(int i = 0; i < fb->height; i++) {
 		for(int j = 0; j < fb->width; j++) {
-			putchar(framebuffer_px(fb, j, i));
+			if(framebuffer_px(fb, j, i) != 0)
+				putchar('X');
+			else
+				putchar('0');
 		}
 		putchar('\n');
 	}
@@ -57,7 +60,7 @@ int main() {
 	framebuffer_t* fb = framebuffer_init(10, 15);
 	point_t px1 = {.x = 5, .y = 5};
 	point_t px2 = {.x = 10, .y = 10};
-	draw_aaline(fb, 255, &px1, &px2);
+	set_px(fb, 255, &px1);
 	framebuffer_repr(fb);
 	return 0;
 }
