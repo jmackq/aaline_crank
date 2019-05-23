@@ -11,6 +11,7 @@ typedef struct {
 	int y;
 } point_t;
 
+void set_px(framebuffer_t* fb, unsigned color, point_t* px);
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2);
 
 framebuffer_t* framebuffer_init(int w, int h);
