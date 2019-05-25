@@ -16,7 +16,7 @@ unsigned framebuffer_px(framebuffer_t* fb, point_t* px) {
 	return fbuf[(fb->width * px->y) + px->x];
 }
 
-unsigned rgba32(int8_t r, int8_t g, int8_t b, int8_t a) {
+unsigned rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 	return r << 24 | g << 16 | b << 8 | a;
 }
 
@@ -30,7 +30,7 @@ void framebuffer_repr(framebuffer_t* fb) {
 	printf("%dx%d\n", fb->width, fb->height);
 	for(int i = 0; i < fb->height; i++) {
 		for(int j = 0; j < fb->width; j++) {
-			printf("%d", fbuf[i * fb->width + j]);
+			printf("%u", fbuf[i * fb->width + j]);
 		}
 		putchar('\n');
 	}
