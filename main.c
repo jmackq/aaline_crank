@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "framebuffer.h"
+#include "stb_image_write.h"
 
 framebuffer_t* framebuffer_init(int w, int h) {
 	int fb_sz = w * h * sizeof(unsigned);
@@ -40,7 +43,9 @@ void framebuffer_repr(framebuffer_t* fb) {
 	}
 }
 
-
+void write_bmp(framebuffer_t* fb) {
+	stbi_write_jpg("framebuffer.jpg", fb->width, fb->height, 4, fb->fb, 100);
+}
 
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	double dx = p2->x - p1->x;
@@ -66,10 +71,11 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 }
 
 int main() {
-	framebuffer_t* fb = framebuffer_init(10, 10);
-	point_t px1 = {.x = 0, .y = 0};
-	point_t px2 = {.x = 9, .y = 3};
-	draw_aaline(fb, rgba32(1, 1, 1, 1), &px1, &px2);
+	framebuffer_t* fb = framebuffer_init(100, 100);
+	point_t px1 = {.x = 25, .y = 25};
+	point_t px2 = {.x = 75, .y = 75};
+	draw_aaline(fb, rgba32(255, 0, 255, 255), &px1, &px2);
 	framebuffer_repr(fb);
+	write_bmp(fb);
 	return 0;
 }
