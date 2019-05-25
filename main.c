@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-
 #include "framebuffer.h"
-#include "stb_image_write.h"
 
 framebuffer_t* framebuffer_init(int w, int h) {
 	int fb_sz = w * h * sizeof(unsigned);
@@ -59,6 +52,7 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	point_t top_subpx, bot_subpx;
 	for(int t = p1->x; t <= p2->x; t++) {
 		//color should be alpha * frac part
+		//TODO: add OVER blending
 		top_subpx.x = t;
 		top_subpx.y = (int) y_t;
 		bot_subpx.x = t; 
