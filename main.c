@@ -17,19 +17,19 @@ unsigned framebuffer_px(framebuffer_t* fb, point_t* px) {
 }
 
 unsigned rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-	return r << 24 | g << 16 | b << 8 | a;
+	return a << 24 | b << 16 | g << 8 | r;
 }
 
 uint8_t rgba32_channel(unsigned color, char channel) {
 	unsigned value;
 	switch(channel) {
-		case 'r':
+		case 'a':
 			value = color >> 24;
 			break;
-		case 'g':
+		case 'b':
 			value = color >> 16;
 			break;
-		case 'b':
+		case 'g':
 			value = color >> 8;
 			break;
 		default:
@@ -69,7 +69,7 @@ void framebuffer_repr(framebuffer_t* fb) {
 }
 
 void write_bmp(framebuffer_t* fb) {
-	stbi_write_jpg("framebuffer.jpg", fb->width, fb->height, 4, fb->fb, 100);
+	stbi_write_bmp("framebuffer.bmp", fb->width, fb->height, 4, fb->fb);
 }
 
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
@@ -98,7 +98,6 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 }
 
 int main() {
-	/*
 	framebuffer_t* fb = framebuffer_init(100, 100);
 	point_t px1 = {.x = 25, .y = 25};
 	point_t px2 = {.x = 75, .y = 75};
@@ -108,23 +107,10 @@ int main() {
 		for(int j = 0; j < fb->height; j++) {
 			pxi.x = i;
 			pxi.y = j;
-			set_px(fb, rgba32(0, 255, 0, 0), &pxi);
+			set_px(fb, rgba32(255, 0, 0, 255), &pxi);
 		}
 	}
 	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
 	write_bmp(fb);
-	return 0;*/
-	framebuffer_t* fb = framebuffer_init(256, 256);
-	unsigned bg, fg;
-	bg = rgba32(255, 5, 10, 255); // should be red
-	assert(rgba32_channel(bg, 'r') == 255);
-	assert(rgba32_channel(bg, 'g') == 5);
-	assert(rgba32_channel(bg, 'b') == 10);
-	assert(rgba32_channel(bg, 'a') == 255);
-	fg = rgba32(5, 10, 255, 100); // should be translucent blue
-	unsigned blended = alpha_over(fg, bg);
-	printf("(%u, %u, %u, %u)\n", rgba32_channel(blended, 'r'),
-			rgba32_channel(blended, 'g'),
-			rgba32_channel(blended, 'b'),
-			rgba32_channel(blended, 'a'));
+	return 0;
 }
