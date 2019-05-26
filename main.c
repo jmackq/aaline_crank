@@ -77,9 +77,9 @@ unsigned multiply_alpha(unsigned color, double alpha) {
 	return rgba32(rgba32_channel(color, 'r'), rgba32_channel(color, 'g'), rgba32_channel(color, 'b'), (uint8_t) (normalized_alpha * 255));
 }
 
-int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	double dx = p2->x - p1->x;
-	double dy = p2->y - p1->y;
+int _draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	double dx = abs(p2->x - p1->x);
+	double dy = abs(p2->y - p1->y);
 	double m;
 	double y_t = p1->y;
 	if(dx == 0.0)
@@ -104,10 +104,29 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	return 1;
 }
 
+int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	int slope = abs(p2->y - p1->y) > abs(p2->x - p1->x);
+	point_t transformed_p1 = {.x = p1->x, .y = p1->y};
+	point_t transformed_p2 = {.x = p2->x, .y = p2->y};
+	if(slope) {
+		transformed_p1.x = p1->y;
+		transformed_p1.y = p1->x;	
+		transformed_p2.x = p2->x;
+		transformed_p2.y = p2->y;
+	}
+	if(p1->x > p2->x) {
+		transformed_p1.x = p2->x;
+		transformed_p1.y = p2->y;
+		transformed_p2.x = p1->x;
+		transformed_p2.y = p1->y;
+	}
+	return _draw_aaline(fb, color, &transformed_p1, &transformed_p2);
+}
+
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 33, .y = 33};
-	point_t px2 = {.x = 75, .y = 50};
+	point_t px2 = {.x = 33, .y = 33};
+	point_t px1 = {.x = 33, .y = 66};
 	//make the background green
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
