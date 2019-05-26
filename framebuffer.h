@@ -7,12 +7,18 @@
 
 #include "stb_image_write.h"
 
+/**
+ * @brief Framebuffer struct
+ */
 typedef struct {
-	void* fb;
-	int width;
-	int height;
+	void* fb; /**< pointer to actual struct data, cast to unsigned* to use 32bit rgba */
+	int width; /**< width in pixels */
+	int height; /**< height in pixels */
 } framebuffer_t;
 
+/**
+ * @brief (X,Y) coordinate struct
+ */
 typedef struct {
 	int x;
 	int y;
@@ -31,6 +37,16 @@ typedef struct {
 unsigned rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 
 /**
+ * @brief Extract channel from packed rgba
+ *
+ * @param color rgba int to unpack
+ * @param channel one of 'rgba'
+ *
+ * @return extracted channel value
+ */
+uint8_t rgba32_channel(unsigned color, char channel);
+
+/**
  * @brief Set the value of a pixel in a framebuffer
  *
  * @param fb framebuffer to operate on
@@ -38,6 +54,16 @@ unsigned rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
  * @param px pixel to set the value of
  */
 void set_px(framebuffer_t* fb, unsigned color, point_t* px);
+
+/**
+ * @brief Blend two colors using the OVER operation
+ *
+ * @param top color of top pixel
+ * @param bot color of bottom pixel
+ *
+ * @return color of blended pixel
+ */
+unsigned alpha_over(unsigned top, unsigned bot);
 
 /**
  * @brief Write framebuffer to image file
