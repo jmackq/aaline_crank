@@ -20,7 +20,7 @@ unsigned rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 	return a << 24 | b << 16 | g << 8 | r;
 }
 
-uint8_t rgba32_channel(unsigned color, char channel) {
+uint8_t rgba32_channel(unsigned color, const char channel) {
 	unsigned value;
 	switch(channel) {
 		case 'a':
@@ -72,6 +72,11 @@ void write_bmp(framebuffer_t* fb) {
 	stbi_write_bmp("framebuffer.bmp", fb->width, fb->height, 4, fb->fb);
 }
 
+unsigned multiply_alpha(unsigned color, double alpha) {
+	double normalized_alpha = alpha * ((double) rgba32_channel(color, 'a') / 255);
+	return rgba32(rgba32_channel(color, 'r'), rgba32_channel(color, 'g'), rgba32_channel(color, 'b'), (uint8_t) (normalized_alpha * 255));
+}
+
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
@@ -90,6 +95,8 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 		bot_subpx.y = (int) y_t - 1;	
 		top_color = alpha_over(color, framebuffer_px(fb, &top_subpx));
 		bot_color = alpha_over(color, framebuffer_px(fb, &bot_subpx));
+		top_color = multiply_alpha(top_color, y_t - ((int) y_t));
+		bot_color = multiply_alpha(bot_color, 1 - (y_t - ((int) y_t)));
 		set_px(fb, top_color, &top_subpx);
 		set_px(fb, bot_color, &bot_subpx);
 		y_t += m;
@@ -99,8 +106,8 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 25, .y = 25};
-	point_t px2 = {.x = 75, .y = 75};
+	point_t px1 = {.x = 33, .y = 33};
+	point_t px2 = {.x = 75, .y = 50};
 	//make the background green
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
