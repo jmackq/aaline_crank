@@ -118,8 +118,8 @@ int main() {
 	unsigned bg, fg;
 	bg = rgba32(255, 5, 10, 255); // should be red
 	assert(rgba32_channel(bg, 'r') == 255);
-	assert(rgba32_channel(bg, 'b') == 5);
-	assert(rgba32_channel(bg, 'g') == 10);
+	assert(rgba32_channel(bg, 'g') == 5);
+	assert(rgba32_channel(bg, 'b') == 10);
 	assert(rgba32_channel(bg, 'a') == 255);
 	fg = rgba32(5, 10, 255, 100); // should be translucent blue
 	unsigned blended = alpha_over(fg, bg);
