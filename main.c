@@ -98,6 +98,7 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 }
 
 int main() {
+	/*
 	framebuffer_t* fb = framebuffer_init(100, 100);
 	point_t px1 = {.x = 25, .y = 25};
 	point_t px2 = {.x = 75, .y = 75};
@@ -112,5 +113,18 @@ int main() {
 	}
 	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
 	write_bmp(fb);
-	return 0;
+	return 0;*/
+	framebuffer_t* fb = framebuffer_init(256, 256);
+	unsigned bg, fg;
+	bg = rgba32(255, 5, 10, 255); // should be red
+	assert(rgba32_channel(bg, 'r') == 255);
+	assert(rgba32_channel(bg, 'b') == 5);
+	assert(rgba32_channel(bg, 'g') == 10);
+	assert(rgba32_channel(bg, 'a') == 255);
+	fg = rgba32(5, 10, 255, 100); // should be translucent blue
+	unsigned blended = alpha_over(fg, bg);
+	printf("(%u, %u, %u, %u)\n", rgba32_channel(blended, 'r'),
+			rgba32_channel(blended, 'g'),
+			rgba32_channel(blended, 'b'),
+			rgba32_channel(blended, 'a'));
 }
