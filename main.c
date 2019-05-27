@@ -103,7 +103,7 @@ int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p
 	printf("steep");
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
-	double slope = dy / dx;
+	double slope = dx / dy;
 	double true_x = p1->x;
 	point_t line_px1, line_px2;
 	line_px1.x = p1->x;
@@ -147,7 +147,7 @@ int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t*
 	line_px2.y = p1->y + shift;
 	line_px2.x = p1->x;
 	unsigned color1, color2;
-	for(int t = p1->y; t <= p2->y; t++) {
+	for(int t = p1->x; t <= p2->x; t++) {
 		true_y += slope;
 		line_px1.y = int_part(true_y);
 		line_px1.x = t;
@@ -185,8 +185,8 @@ static inline int sign(double d) {
 
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 0, .y = 0};
-	point_t px2 = {.x = 10, .y = 5};
+	point_t px1 = {.x = 1, .y = 1};
+	point_t px2 = {.x = 50, .y = 100};
 	//make the background red 
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
@@ -198,6 +198,5 @@ int main() {
 	}
 	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
 	write_bmp(fb);
-	unsigned red = rgba32(255, 0, 0, 255);
 	return 0;
 }
