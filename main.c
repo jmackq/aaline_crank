@@ -108,7 +108,7 @@ static inline double frac_part(double x) {
 }
 
 int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	printf("steep");
+	printf("steep\n");
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
 	double slope = dx / dy;
@@ -214,10 +214,24 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 			return draw_aaline_steep(fb, color, p1, p2);
 }
 
+int draw_aaline_thick(framebuffer_t* fb, unsigned color, unsigned thickness, point_t* p1, point_t* p2) {
+	int sign = 1;
+	int retval = 1;
+	point_t p1_shifted = {.x = p1->x, .y = p1->y};
+	point_t p2_shifted = {.x = p2->x, .y = p2->y};
+	for(int i = 0; i < thickness; i++) {
+		p1_shifted.y += i * sign;
+		p2_shifted.y += i * sign;
+		retval &= draw_aaline(fb, color, &p1_shifted, &p2_shifted);
+		sign *= -1;
+	}
+	return retval;
+}
+
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 1, .y = 1};
-	point_t px2 = {.x = 100, .y = 1};
+	point_t px1 = {.x = 0, .y = 0};
+	point_t px2 = {.x = 100, .y = 50};
 	//make the background red 
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
@@ -227,7 +241,7 @@ int main() {
 			set_px(fb, rgba32(255, 0, 0, 255), &pxi);
 		}
 	}
-	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
+	draw_aaline_thick(fb, rgba32(255, 255, 255, 255), 5, &px1, &px2);
 	write_bmp(fb);
 	return 0;
 }
