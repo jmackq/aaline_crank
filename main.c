@@ -5,9 +5,9 @@ int framebuffer_overrun(framebuffer_t* fb, point_t* px) {
 	int y_check = (px->y < 0) || (px->y > fb->height);
 	if(x_check || y_check) {
 		printf("out of bounds framebuffer access : %ux%u\n", px->x, px->y);
-		return -1;
+		return 1;
 	}
-	return 1;
+	return 0;
 }
 
 framebuffer_t* framebuffer_init(int w, int h) {
