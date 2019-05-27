@@ -91,6 +91,14 @@ unsigned multiply_alpha(unsigned color, double alpha) {
 	return rgba32(rgba32_channel(color, 'r'), rgba32_channel(color, 'g'), rgba32_channel(color, 'b'), (uint8_t) (normalized_alpha * 255));
 }
 
+
+static inline int sign(double d) {
+	if(d < 0)
+		return -1;
+	else
+		return 1;
+}
+
 static inline int int_part(double x) {
 	return (int) x;
 }
@@ -130,6 +138,26 @@ int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p
 	return 1;
 }
 
+int draw_line_vertical(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	point_t line_px = {.x = p1->x, .y = -1};
+	unsigned color_blended = -1;
+	for(int t = p1->y; t <= p2->y; t++) {
+		line_px.y = t;
+		color_blended = alpha_over(color, framebuffer_px(fb, &line_px));
+		set_px(fb, color_blended, &line_px);
+	}	
+}
+
+int draw_line_horizontal(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	point_t line_px = {.x = -1, .y = p1->y};
+	unsigned color_blended = -1;
+	for(int t = p1->x; t <= p2->x; t++) {
+		line_px.x = t;
+		color_blended = alpha_over(color, framebuffer_px(fb, &line_px));
+		set_px(fb, color_blended, &line_px);
+	}	
+}
+
 int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	printf("shallow\n");
 	double dx = p2->x - p1->x;
@@ -164,6 +192,16 @@ int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t*
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
+	if(dx == 0.0) 
+		if(dy > 0)
+			return draw_line_vertical(fb, color, p1, p2);
+		else
+			return draw_line_vertical(fb, color, p2, p1);
+	if(dy == 0.0)
+		if(dx > 0)
+			return draw_line_horizontal(fb, color, p1, p2);
+		else
+			return draw_line_horizontal(fb, color, p2, p1);
 	if(fabs(dx) > fabs(dy))
 		if(p2->x < p1->x)
 			return draw_aaline_shallow(fb, color, p2, p1);
@@ -176,17 +214,10 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 			return draw_aaline_steep(fb, color, p1, p2);
 }
 
-static inline int sign(double d) {
-	if(d < 0)
-		return -1;
-	else
-		return 1;
-}
-
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
 	point_t px1 = {.x = 1, .y = 1};
-	point_t px2 = {.x = 50, .y = 100};
+	point_t px2 = {.x = 100, .y = 1};
 	//make the background red 
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
