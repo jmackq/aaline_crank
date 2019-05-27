@@ -77,11 +77,6 @@ unsigned multiply_alpha(unsigned color, double alpha) {
 	return rgba32(rgba32_channel(color, 'r'), rgba32_channel(color, 'g'), rgba32_channel(color, 'b'), (uint8_t) (normalized_alpha * 255));
 }
 
-
-static inline int round_up(double x) {
-	return (int) (((double) (x)) + 0.5);
-}
-
 static inline int int_part(double x) {
 	return (int) x;
 }
@@ -105,14 +100,17 @@ int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p
 		shift = -1;
 	line_px2.x = p1->x + shift;
 	line_px2.y = p1->y;
+	unsigned color1, color2;
 	for(int t = p1->y; t <= p2->y; t++) {
 		true_x += slope;
 		line_px1.x = int_part(true_x);
 		line_px1.y = t;
 		line_px2.x = int_part(true_x) + shift;
 		line_px2.y = t;
-		set_px(fb, color, &line_px1);
-		set_px(fb, color, &line_px2);
+		color1 = alpha_over(multiply_alpha(color, frac_part(true_x)), framebuffer_px(fb, &line_px1));
+		color2 = alpha_over(multiply_alpha(color, 1.0 - frac_part(true_x)), framebuffer_px(fb, &line_px2));
+		set_px(fb, color1, &line_px1);
+		set_px(fb, color2, &line_px2);
 	}
 	return 1;
 }
@@ -121,7 +119,7 @@ int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t*
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
 	double slope = dy / dx;
-	double true_x = p1->x;
+	double true_y = p1->y;
 	point_t line_px1, line_px2;
 	line_px1.x = p1->x;
 	line_px1.y = p1->y;
@@ -130,16 +128,19 @@ int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t*
 		shift = 1;
 	else
 		shift = -1;
-	line_px2.x = p1->x + shift;
-	line_px2.y = p1->y;
+	line_px2.y = p1->y + shift;
+	line_px2.x = p1->x;
+	unsigned color1, color2;
 	for(int t = p1->y; t <= p2->y; t++) {
-		true_x += slope;
-		line_px1.x = int_part(true_x);
-		line_px1.y = t;
-		line_px2.x = int_part(true_x) + shift;
-		line_px2.y = t;
-		set_px(fb, color, &line_px1);
-		set_px(fb, color, &line_px2);
+		true_y += slope;
+		line_px1.y = int_part(true_y);
+		line_px1.x = t;
+		line_px2.y = int_part(true_y) + shift;
+		line_px2.x = t;
+		color1 = alpha_over(multiply_alpha(color, frac_part(true_y)), framebuffer_px(fb, &line_px1));
+		color2 = alpha_over(multiply_alpha(color, 1.0 - frac_part(true_y)), framebuffer_px(fb, &line_px2));
+		set_px(fb, color1, &line_px1);
+		set_px(fb, color2, &line_px2);
 	}
 	return 1;
 }
@@ -147,7 +148,7 @@ int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t*
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
-	if(fabs(dx) < fabs(dy))
+	if(fabs(dx) > fabs(dy))
 		if(p2->x < p1->x)
 			return draw_aaline_shallow(fb, color, p2, p1);
 		else
@@ -166,30 +167,11 @@ static inline int sign(double d) {
 		return 1;
 }
 
-int draw_line(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	double dx = p2->x - p1->x;
-	double dy = p2->y - p1->y;
-	double derror = abs(dy/dx);
-	double error = 0;
-	point_t pt;
-	pt.y = p1->y;
-	for(int t = p1->x; t <= p2->x; t++) {
-		pt.x = t;
-		set_px(fb, color, &pt);
-		error += derror;
-		if(error >= 0.5) {
-			pt.y += sign(dy);
-			error -= 1.0;
-		}
-	}
-	return 1;
-}
-
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 0, .y = 0};
-	point_t px2 = {.x = 99, .y = 50};
-	//make the background green
+	point_t px1 = {.x = 1, .y = 1};
+	point_t px2 = {.x = 22, .y = 44};
+	//make the background red 
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
 		for(int j = 0; j < fb->height; j++) {
@@ -200,5 +182,6 @@ int main() {
 	}
 	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
 	write_bmp(fb);
+	unsigned red = rgba32(255, 0, 0, 255);
 	return 0;
 }
