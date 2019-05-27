@@ -1,5 +1,15 @@
 #include "framebuffer.h"
 
+int framebuffer_overrun(framebuffer_t* fb, point_t* px) {
+	int x_check = (px->x < 0) || (px->x > fb->width);
+	int y_check = (px->y < 0) || (px->y > fb->height);
+	if(x_check || y_check) {
+		printf("out of bounds framebuffer access : %ux%u\n", px->x, px->y);
+		return -1;
+	}
+	return 1;
+}
+
 framebuffer_t* framebuffer_init(int w, int h) {
 	int fb_sz = w * h * sizeof(unsigned);
 	unsigned* fb_frame = malloc(fb_sz);
@@ -12,6 +22,8 @@ framebuffer_t* framebuffer_init(int w, int h) {
 }
 
 unsigned framebuffer_px(framebuffer_t* fb, point_t* px) {
+	if(framebuffer_overrun(fb, px))
+		return -1;
 	unsigned* fbuf = (unsigned*) fb->fb;
 	return fbuf[(fb->width * px->y) + px->x];
 }
@@ -53,6 +65,8 @@ unsigned alpha_over(unsigned top, unsigned bot) {
 }
 
 void set_px(framebuffer_t* fb, unsigned color, point_t* px) {
+	if(framebuffer_overrun(fb, px))
+		return;
 	unsigned* fbuf = (unsigned*) fb->fb;
 	fbuf[(fb->width * px->y) + px->x] = color;
 }
@@ -86,6 +100,7 @@ static inline double frac_part(double x) {
 }
 
 int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	printf("steep");
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
 	double slope = dy / dx;
@@ -116,6 +131,7 @@ int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p
 }
 
 int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	printf("shallow\n");
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
 	double slope = dy / dx;
@@ -169,8 +185,8 @@ static inline int sign(double d) {
 
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 1, .y = 1};
-	point_t px2 = {.x = 22, .y = 44};
+	point_t px1 = {.x = 0, .y = 0};
+	point_t px2 = {.x = 10, .y = 5};
 	//make the background red 
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
