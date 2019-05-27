@@ -77,44 +77,86 @@ unsigned multiply_alpha(unsigned color, double alpha) {
 	return rgba32(rgba32_channel(color, 'r'), rgba32_channel(color, 'g'), rgba32_channel(color, 'b'), (uint8_t) (normalized_alpha * 255));
 }
 
-int _draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+
+static inline int round_up(double x) {
+	return (int) (((double) (x)) + 0.5);
+}
+
+static inline int int_part(double x) {
+	return (int) x;
+}
+
+static inline double frac_part(double x) { 
+	return x - int_part(x);
+}
+
+int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
-	double m;
-	double y_t = p1->y;
-	if(dx == 0.0)
-		m = 1;
+	double slope = dy / dx;
+	double true_x = p1->x;
+	point_t line_px1, line_px2;
+	line_px1.x = p1->x;
+	line_px1.y = p1->y;
+	int shift;
+	if(slope > 1)
+		shift = 1;
 	else
-		m = dy/dx;
-	point_t top_subpx, bot_subpx;
-	unsigned top_color, bot_color;
-	if(m > 1.0)
-		for(int t = p1->x; t <= p2->x; t++) {
-			top_subpx.x = t;
-			top_subpx.y = (int) y_t;
-			bot_subpx.x = t; 
-			bot_subpx.y = (int) y_t - 1;	
-			top_color = alpha_over(color, framebuffer_px(fb, &top_subpx));
-			bot_color = alpha_over(color, framebuffer_px(fb, &bot_subpx));
-			top_color = multiply_alpha(top_color, y_t - ((int) y_t));
-			bot_color = multiply_alpha(bot_color, 1 - (y_t - ((int) y_t)));
-			set_px(fb, top_color, &top_subpx);
-			set_px(fb, bot_color, &bot_subpx);
-			y_t += m;
-		}
+		shift = -1;
+	line_px2.x = p1->x + shift;
+	line_px2.y = p1->y;
+	for(int t = p1->y; t <= p2->y; t++) {
+		true_x += slope;
+		line_px1.x = int_part(true_x);
+		line_px1.y = t;
+		line_px2.x = int_part(true_x) + shift;
+		line_px2.y = t;
+		set_px(fb, color, &line_px1);
+		set_px(fb, color, &line_px2);
+	}
+	return 1;
+}
+
+int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	double dx = p2->x - p1->x;
+	double dy = p2->y - p1->y;
+	double slope = dy / dx;
+	double true_x = p1->x;
+	point_t line_px1, line_px2;
+	line_px1.x = p1->x;
+	line_px1.y = p1->y;
+	int shift;
+	if(slope > 1)
+		shift = 1;
+	else
+		shift = -1;
+	line_px2.x = p1->x + shift;
+	line_px2.y = p1->y;
+	for(int t = p1->y; t <= p2->y; t++) {
+		true_x += slope;
+		line_px1.x = int_part(true_x);
+		line_px1.y = t;
+		line_px2.x = int_part(true_x) + shift;
+		line_px2.y = t;
+		set_px(fb, color, &line_px1);
+		set_px(fb, color, &line_px2);
+	}
 	return 1;
 }
 
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	point_t transformed_p1 = {.x = p1->x, .y = p1->y};
-	point_t transformed_p2 = {.x = p2->x, .y = p2->y};
-	if(p1->x > p2->x) {
-		transformed_p1.x = p2->x;
-		transformed_p1.y = p2->y;
-		transformed_p2.x = p1->x;
-		transformed_p2.y = p1->y;
-	}
-	return _draw_aaline(fb, color, &transformed_p1, &transformed_p2);
+	double dx = p2->x - p1->x;
+	double dy = p2->y - p1->y;
+	if(fabs(dx) < fabs(dy))
+		if(p2->x < p1->x)
+			return draw_aaline_shallow(fb, color, p2, p1);
+		else
+			return draw_aaline_shallow(fb, color, p1, p2);
+	else
+		if(p2->y < p1->y)
+			return draw_aaline_steep(fb, color, p2, p1);
+		else
+			return draw_aaline_steep(fb, color, p1, p2);
 }
 
 static inline int sign(double d) {
@@ -145,8 +187,8 @@ int draw_line(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 25, .y = 25};
-	point_t px2 = {.x = 75, .y = 75};
+	point_t px1 = {.x = 0, .y = 0};
+	point_t px2 = {.x = 99, .y = 50};
 	//make the background green
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
@@ -156,7 +198,7 @@ int main() {
 			set_px(fb, rgba32(255, 0, 0, 255), &pxi);
 		}
 	}
-	draw_line(fb, rgba32(255, 255, 255, 255), &px1, &px2);
+	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
 	write_bmp(fb);
 	return 0;
 }
