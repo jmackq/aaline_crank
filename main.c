@@ -78,8 +78,8 @@ unsigned multiply_alpha(unsigned color, double alpha) {
 }
 
 int _draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	double dx = abs(p2->x - p1->x);
-	double dy = abs(p2->y - p1->y);
+	double dx = p2->x - p1->x;
+	double dy = p2->y - p1->y;
 	double m;
 	double y_t = p1->y;
 	if(dx == 0.0)
@@ -88,32 +88,26 @@ int _draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 		m = dy/dx;
 	point_t top_subpx, bot_subpx;
 	unsigned top_color, bot_color;
-	for(int t = p1->x; t <= p2->x; t++) {
-		top_subpx.x = t;
-		top_subpx.y = (int) y_t;
-		bot_subpx.x = t; 
-		bot_subpx.y = (int) y_t - 1;	
-		top_color = alpha_over(color, framebuffer_px(fb, &top_subpx));
-		bot_color = alpha_over(color, framebuffer_px(fb, &bot_subpx));
-		top_color = multiply_alpha(top_color, y_t - ((int) y_t));
-		bot_color = multiply_alpha(bot_color, 1 - (y_t - ((int) y_t)));
-		set_px(fb, top_color, &top_subpx);
-		set_px(fb, bot_color, &bot_subpx);
-		y_t += m;
-	}
+	if(m > 1.0)
+		for(int t = p1->x; t <= p2->x; t++) {
+			top_subpx.x = t;
+			top_subpx.y = (int) y_t;
+			bot_subpx.x = t; 
+			bot_subpx.y = (int) y_t - 1;	
+			top_color = alpha_over(color, framebuffer_px(fb, &top_subpx));
+			bot_color = alpha_over(color, framebuffer_px(fb, &bot_subpx));
+			top_color = multiply_alpha(top_color, y_t - ((int) y_t));
+			bot_color = multiply_alpha(bot_color, 1 - (y_t - ((int) y_t)));
+			set_px(fb, top_color, &top_subpx);
+			set_px(fb, bot_color, &bot_subpx);
+			y_t += m;
+		}
 	return 1;
 }
 
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	int slope = abs(p2->y - p1->y) > abs(p2->x - p1->x);
 	point_t transformed_p1 = {.x = p1->x, .y = p1->y};
 	point_t transformed_p2 = {.x = p2->x, .y = p2->y};
-	if(slope) {
-		transformed_p1.x = p1->y;
-		transformed_p1.y = p1->x;	
-		transformed_p2.x = p2->x;
-		transformed_p2.y = p2->y;
-	}
 	if(p1->x > p2->x) {
 		transformed_p1.x = p2->x;
 		transformed_p1.y = p2->y;
@@ -123,10 +117,36 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	return _draw_aaline(fb, color, &transformed_p1, &transformed_p2);
 }
 
+static inline int sign(double d) {
+	if(d < 0)
+		return -1;
+	else
+		return 1;
+}
+
+int draw_line(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	double dx = p2->x - p1->x;
+	double dy = p2->y - p1->y;
+	double derror = abs(dy/dx);
+	double error = 0;
+	point_t pt;
+	pt.y = p1->y;
+	for(int t = p1->x; t <= p2->x; t++) {
+		pt.x = t;
+		set_px(fb, color, &pt);
+		error += derror;
+		if(error >= 0.5) {
+			pt.y += sign(dy);
+			error -= 1.0;
+		}
+	}
+	return 1;
+}
+
 int main() {
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px2 = {.x = 33, .y = 33};
-	point_t px1 = {.x = 33, .y = 66};
+	point_t px1 = {.x = 25, .y = 25};
+	point_t px2 = {.x = 75, .y = 75};
 	//make the background green
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
@@ -136,7 +156,7 @@ int main() {
 			set_px(fb, rgba32(255, 0, 0, 255), &pxi);
 		}
 	}
-	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
+	draw_line(fb, rgba32(255, 255, 255, 255), &px1, &px2);
 	write_bmp(fb);
 	return 0;
 }
