@@ -67,6 +67,16 @@ void set_px(framebuffer_t* fb, unsigned color, point_t* px);
 unsigned alpha_over(unsigned top, unsigned bot);
 
 /**
+ * @brief Multiply the alpha value of an rgba color by a value in [0, 1]
+ *
+ * @param color color to operate on
+ * @param alpha factor to multiply alpha by
+ *
+ * @return the modified color
+ */
+unsigned multiply_alpha(unsigned color, double alpha);
+
+/**
  * @brief Write framebuffer to image file
  *
  * @param fb framebuffer to operate on
@@ -109,3 +119,13 @@ unsigned framebuffer_px(framebuffer_t* fb, point_t* px);
  * @param fb framebuffer to operate on
  */
 void framebuffer_repr(framebuffer_t* fb);
+
+/**
+ * @brief Check if pixel is within framebuffer
+ *
+ * @param fb framebuffer to operate on
+ * @param px pixel to check
+ *
+ * @return 1 if pixel is out of bounds, 0 otherwise
+ */
+int framebuffer_overrun(framebuffer_t* fb, point_t* px);

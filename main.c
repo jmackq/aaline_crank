@@ -4,7 +4,7 @@ int framebuffer_overrun(framebuffer_t* fb, point_t* px) {
 	int x_check = (px->x < 0) || (px->x > fb->width);
 	int y_check = (px->y < 0) || (px->y > fb->height);
 	if(x_check || y_check) {
-		printf("out of bounds framebuffer access : %ux%u\n", px->x, px->y);
+		//printf("out of bounds framebuffer access : %ux%u\n", px->x, px->y);
 		return 1;
 	}
 	return 0;
@@ -27,6 +27,13 @@ unsigned framebuffer_px(framebuffer_t* fb, point_t* px) {
 	unsigned* fbuf = (unsigned*) fb->fb;
 	return fbuf[(fb->width * px->y) + px->x];
 }
+
+// these rgba32 functions assume the framebuffer is ordered ARGB
+// with 8 bits for each
+//
+// for 16 bit color, these could be duplicated as rgba16 functions,
+// stored as unsigned with empty upper bits, then slice them off 
+// when put into the framebuffer
 
 unsigned rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 	return a << 24 | b << 16 | g << 8 | r;
@@ -91,15 +98,8 @@ unsigned multiply_alpha(unsigned color, double alpha) {
 	return rgba32(rgba32_channel(color, 'r'), rgba32_channel(color, 'g'), rgba32_channel(color, 'b'), (uint8_t) (normalized_alpha * 255));
 }
 
-
-static inline int sign(double d) {
-	if(d < 0)
-		return -1;
-	else
-		return 1;
-}
-
 static inline int int_part(double x) {
+	// use this because it rounds towards 0, not -inf like floor
 	return (int) x;
 }
 
@@ -108,7 +108,9 @@ static inline double frac_part(double x) {
 }
 
 int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	printf("steep\n");
+	// antialiased line drawing using Xiaolin Wu's algorithm
+	// dy and dx are computed twice, they could be stashed
+	// somewhere during draw_aaline
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
 	double slope = dx / dy;
@@ -130,8 +132,8 @@ int draw_aaline_steep(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p
 		line_px1.y = t;
 		line_px2.x = int_part(true_x) + shift;
 		line_px2.y = t;
-		color1 = alpha_over(multiply_alpha(color, frac_part(true_x)), framebuffer_px(fb, &line_px1));
-		color2 = alpha_over(multiply_alpha(color, 1.0 - frac_part(true_x)), framebuffer_px(fb, &line_px2));
+		color1 = alpha_over(multiply_alpha(color, 1.0 - frac_part(true_x)), framebuffer_px(fb, &line_px1));
+		color2 = alpha_over(multiply_alpha(color, frac_part(true_x)), framebuffer_px(fb, &line_px2));
 		set_px(fb, color1, &line_px1);
 		set_px(fb, color2, &line_px2);
 	}
@@ -149,6 +151,7 @@ int draw_line_vertical(framebuffer_t* fb, unsigned color, point_t* p1, point_t* 
 }
 
 int draw_line_horizontal(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	// XXX: this generates a little stumble pixel at the start
 	point_t line_px = {.x = -1, .y = p1->y};
 	unsigned color_blended = -1;
 	for(int t = p1->x; t <= p2->x; t++) {
@@ -159,7 +162,8 @@ int draw_line_horizontal(framebuffer_t* fb, unsigned color, point_t* p1, point_t
 }
 
 int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
-	printf("shallow\n");
+	// this is largely the same as draw_aaline_steep
+	// maybe a clever person could use one function, it would be easy with objects
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
 	double slope = dy / dx;
@@ -181,8 +185,8 @@ int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t*
 		line_px1.x = t;
 		line_px2.y = int_part(true_y) + shift;
 		line_px2.x = t;
-		color1 = alpha_over(multiply_alpha(color, frac_part(true_y)), framebuffer_px(fb, &line_px1));
-		color2 = alpha_over(multiply_alpha(color, 1.0 - frac_part(true_y)), framebuffer_px(fb, &line_px2));
+		color1 = alpha_over(multiply_alpha(color, 1.0 - frac_part(true_y)), framebuffer_px(fb, &line_px1));
+		color2 = alpha_over(multiply_alpha(color, frac_part(true_y)), framebuffer_px(fb, &line_px2));
 		set_px(fb, color1, &line_px1);
 		set_px(fb, color2, &line_px2);
 	}
@@ -190,24 +194,35 @@ int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t*
 }
 
 int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
+	// this function dispatches to others to do the actual drawing based
+	// on the flavor of the line
+	//
+	// p1 and p2 must be ordered so that p1 < p2 
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
 	if(dx == 0.0) 
+		// the line is vertical
+		// this also handles the degenerate case of p1 == p2
 		if(dy > 0)
 			return draw_line_vertical(fb, color, p1, p2);
 		else
 			return draw_line_vertical(fb, color, p2, p1);
 	if(dy == 0.0)
+		// the line is horizontal
 		if(dx > 0)
 			return draw_line_horizontal(fb, color, p1, p2);
 		else
 			return draw_line_horizontal(fb, color, p2, p1);
 	if(fabs(dx) > fabs(dy))
+		// the slope is in [-1, 1]
+		// the line is drawn as y(x)
 		if(p2->x < p1->x)
 			return draw_aaline_shallow(fb, color, p2, p1);
 		else
 			return draw_aaline_shallow(fb, color, p1, p2);
 	else
+		// the slope is not in [-1, 1]
+		// the line is drawn as x(y)
 		if(p2->y < p1->y)
 			return draw_aaline_steep(fb, color, p2, p1);
 		else
@@ -215,6 +230,8 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 }
 
 int draw_aaline_thick(framebuffer_t* fb, unsigned color, unsigned thickness, point_t* p1, point_t* p2) {
+	// this function draws lines alternating on either side of the specified line to give thickness
+	// XXX: this sometimes has strange striping on the line
 	int sign = 1;
 	int retval = 1;
 	point_t p1_shifted = {.x = p1->x, .y = p1->y};
@@ -228,10 +245,16 @@ int draw_aaline_thick(framebuffer_t* fb, unsigned color, unsigned thickness, poi
 	return retval;
 }
 
-int main() {
+int main(int argc, char** argv) {
+	// argument parsing
+	// expect the argument format x0 y0 x1 y1 thickness
 	framebuffer_t* fb = framebuffer_init(100, 100);
-	point_t px1 = {.x = 0, .y = 0};
-	point_t px2 = {.x = 100, .y = 50};
+	if(argc != 6) {
+		printf("missing arguments\n%s x0 y0 x1 y1 thickness\n", argv[0]);
+		return 0;
+	}
+	point_t px1 = {.x = atoi(argv[1]), .y = atoi(argv[2])};
+	point_t px2 = {.x = atoi(argv[3]), .y = atoi(argv[4])};
 	//make the background red 
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
@@ -241,7 +264,7 @@ int main() {
 			set_px(fb, rgba32(255, 0, 0, 255), &pxi);
 		}
 	}
-	draw_aaline_thick(fb, rgba32(255, 255, 255, 255), 5, &px1, &px2);
+	draw_aaline_thick(fb, rgba32(255, 255, 255, 255), atoi(argv[5]), &px1, &px2);
 	write_bmp(fb);
 	return 0;
 }
