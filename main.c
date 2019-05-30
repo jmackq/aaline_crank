@@ -251,6 +251,86 @@ int draw_aaline_thick(framebuffer_t* fb, unsigned color, unsigned thickness, poi
 	return retval;
 }
 
+vertex_array_t* vertex_array_init(int capacity, unsigned color) {
+	vertex_array_t* va = malloc(sizeof(vertex_array_t));
+	va->capacity = capacity;
+	va->color = color;
+	va->size = 0;
+	va->vertices = malloc(sizeof(point_t) * capacity);
+	return va;
+}
+
+void vertex_array_push(vertex_array_t* va, point_t p) {
+	if(va->capacity == va->size)
+		//do a realloc here
+		assert(0);
+	va->vertices[va->size] = p;
+	va->size++;
+}
+
+int render_vertex_array(framebuffer_t* fb, vertex_array_t* va) {
+	for(int i = 0; i < va->size; i++) {
+		set_px(fb, va->color, &(va->vertices[i]));
+	}
+	return 1;
+}
+
+// returns	1 if p is to the left of the line a-b
+int left_of(point_t a, point_t b, point_t p) {
+	double d = (b.x - a.x) * (p.y - a.y) - (p.x - a.x) * (b.y - a.y);
+	return d >= 0;
+}
+
+int left_of_ss(point_t a, point_t b, double x, double y) {
+	double d = (b.x - a.x) * (y - a.y) - (x - a.x) * (b.y - a.y);
+	return d >= 0;
+}
+
+// returns 	0 if p doesnt intersect va
+// 			1 if p intersects va
+//			2 if p lies inside va
+int rasterize_check(vertex_array_t* va, point_t p) {
+	point_t p1, p2;
+	// if p is to the left of every edge in va it is inside
+	for(int i = 0; i < va->size; i++) {
+		point_t p1 = va->vertices[i];
+		point_t p2 = va->vertices[i + 1];
+		if(i + 1 == va->size)
+			p2 = va->vertices[0];
+		if(!left_of(p1, p2, p))
+			return 0;
+	}
+	return 1;
+}
+
+unsigned supersample(vertex_array_t* va, double x, double y) {
+	point_t p1, p2;
+	double density = 0.1;
+	double average = 0.0;
+	int in = 0;
+	int n = 0;
+	for(double subpx_x = 0; subpx_x < 1.0; subpx_x += density) {
+		for(double subpx_y = 0; subpx_y < 1.0; subpx_y += density) {
+			in = 1;
+			n++;
+			for(int i = 0; i < va->size; i++) {
+				point_t p1 = va->vertices[i];
+				point_t p2 = va->vertices[i + 1];
+				if(i + 1 == va->size)
+					p2 = va->vertices[0];
+				if(!left_of_ss(p1, p2, x + subpx_x, y + subpx_y))
+					in = 0;
+					break;
+			}
+			if(in)
+				average += 1;
+		}
+	}
+	average /= n;
+	assert(average <= 1.0);
+	return multiply_alpha(va->color, average);
+}
+
 int main(int argc, char** argv) {
 	// argument parsing
 	// expect the argument format x0 y0 x1 y1 thickness
@@ -261,7 +341,14 @@ int main(int argc, char** argv) {
 	}
 	point_t px1 = {.x = atoi(argv[1]), .y = atoi(argv[2])};
 	point_t px2 = {.x = atoi(argv[3]), .y = atoi(argv[4])};
+	point_t px3 = {.x = 20, .y = 88};
 	//make the background red 
+	vertex_array_t* va = vertex_array_init(3, rgba32(255, 255, 255, 255));
+	vertex_array_push(va, px1);
+	vertex_array_push(va, px2);
+	vertex_array_push(va, px3);
+
+
 	point_t pxi;
 	for(int i = 0; i < fb->width; i++) {
 		for(int j = 0; j < fb->height; j++) {
@@ -270,7 +357,16 @@ int main(int argc, char** argv) {
 			set_px(fb, rgba32(255, 0, 0, 255), &pxi);
 		}
 	}
-	draw_aaline_thick(fb, rgba32(255, 255, 255, 255), atoi(argv[5]), &px1, &px2);
+	//draw_aaline_thick(fb, rgba32(255, 255, 255, 255), atoi(argv[5]), &px1, &px2);
+	for(int i = 0; i < fb->width; i++) {
+		for(int j = 0; j < fb->height; j++) {
+			pxi.x = i;
+			pxi.y = j;
+			unsigned color = rasterize_check(va, pxi);
+			set_px(fb, color, &pxi);
+		}
+	}
+	render_vertex_array(fb, va);
 	write_bmp(fb);
 	return 0;
 }

@@ -26,6 +26,37 @@ typedef struct {
 } point_t;
 
 /**
+ * @brief Struct for vertex arrays
+ */
+typedef struct {
+	int size; /**< number of vertices in list (index of first empty) */
+	int capacity; /**< current allocated size */
+	unsigned color; /**< packed rgba32 value to use for rendering */
+	point_t* vertices; /**< list of vertices in shape */
+} vertex_array_t;
+
+/**
+ * @brief Initialize a new vertex array
+ * 
+ * @param size number of vertices to be held
+ * @param color packed rgba32 value
+ * @param filled 1 if the shape should be filled
+ * 
+ * @return pointer to the new vertex array
+ */
+vertex_array_t* vertex_array_init(int size, unsigned color);
+
+/**
+ * @brief Add a vertex to a vertex array
+ */
+void vertex_array_push(vertex_array_t* va, point_t p);
+
+/**
+ * @brief Draw a vertex array to a framebuffer
+ */
+int draw_vertex_array(framebuffer_t* fb, vertex_array_t* va);
+
+/**
  * @brief Pack rgba values into one int
  *
  * @param r red intensity from 0 to 255
