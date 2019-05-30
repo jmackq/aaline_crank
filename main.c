@@ -253,10 +253,10 @@ int draw_aaline_thick(framebuffer_t* fb, unsigned color, unsigned thickness, poi
 
 int main(int argc, char** argv) {
 	// argument parsing
-	// expect the argument format x0 y0 x1 y1 thickness
+	// expect the argument format x0 y0 x1 y1
 	framebuffer_t* fb = framebuffer_init(100, 100);
 	if(argc != 6) {
-		printf("missing arguments\n%s x0 y0 x1 y1 thickness\n", argv[0]);
+		printf("missing arguments\n%s x0 y0 x1 y1\n", argv[0]);
 		return 0;
 	}
 	point_t px1 = {.x = atoi(argv[1]), .y = atoi(argv[2])};
@@ -270,7 +270,7 @@ int main(int argc, char** argv) {
 			set_px(fb, rgba32(255, 0, 0, 255), &pxi);
 		}
 	}
-	draw_aaline_thick(fb, rgba32(255, 255, 255, 255), atoi(argv[5]), &px1, &px2);
+	draw_aaline(fb, rgba32(255, 255, 255, 255), &px1, &px2);
 	write_bmp(fb);
 	return 0;
 }
