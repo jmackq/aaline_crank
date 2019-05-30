@@ -148,6 +148,7 @@ int draw_line_vertical(framebuffer_t* fb, unsigned color, point_t* p1, point_t* 
 		color_blended = alpha_over(color, framebuffer_px(fb, &line_px));
 		set_px(fb, color_blended, &line_px);
 	}	
+	return 1;
 }
 
 int draw_line_horizontal(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
@@ -159,6 +160,7 @@ int draw_line_horizontal(framebuffer_t* fb, unsigned color, point_t* p1, point_t
 		color_blended = alpha_over(color, framebuffer_px(fb, &line_px));
 		set_px(fb, color_blended, &line_px);
 	}	
+	return 1;
 }
 
 int draw_aaline_shallow(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
@@ -200,33 +202,37 @@ int draw_aaline(framebuffer_t* fb, unsigned color, point_t* p1, point_t* p2) {
 	// p1 and p2 must be ordered so that p1 < p2 
 	double dx = p2->x - p1->x;
 	double dy = p2->y - p1->y;
-	if(dx == 0.0) 
+	if(dx == 0.0) {
 		// the line is vertical
 		// this also handles the degenerate case of p1 == p2
-		if(dy > 0)
+		if(dy > 0) 
 			return draw_line_vertical(fb, color, p1, p2);
 		else
 			return draw_line_vertical(fb, color, p2, p1);
-	if(dy == 0.0)
+	}
+	if(dy == 0.0) {
 		// the line is horizontal
 		if(dx > 0)
 			return draw_line_horizontal(fb, color, p1, p2);
 		else
 			return draw_line_horizontal(fb, color, p2, p1);
-	if(fabs(dx) > fabs(dy))
+	}
+	if(fabs(dx) > fabs(dy)) {
 		// the slope is in [-1, 1]
 		// the line is drawn as y(x)
 		if(p2->x < p1->x)
 			return draw_aaline_shallow(fb, color, p2, p1);
 		else
 			return draw_aaline_shallow(fb, color, p1, p2);
-	else
+	}
+	else {
 		// the slope is not in [-1, 1]
 		// the line is drawn as x(y)
 		if(p2->y < p1->y)
 			return draw_aaline_steep(fb, color, p2, p1);
 		else
 			return draw_aaline_steep(fb, color, p1, p2);
+	}
 }
 
 int draw_aaline_thick(framebuffer_t* fb, unsigned color, unsigned thickness, point_t* p1, point_t* p2) {
